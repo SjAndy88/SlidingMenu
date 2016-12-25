@@ -23,7 +23,7 @@ public class SlidingMenu extends HorizontalScrollView {
 
     private final static String TAG = SlidingMenu.class.getSimpleName();
 
-    private final static boolean DEBUG_LOG = false;
+    private final static boolean DEBUG_LOG = BuildConfig.DEBUG;
 
     // 响应 SlidingMenu 拖动的触摸范围默认值
     private final static int DEFAULT_SLIDING_WIDTH = 50;
