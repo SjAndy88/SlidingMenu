@@ -23,7 +23,7 @@ public class SlidingMenu extends HorizontalScrollView {
 
     private final static String TAG = SlidingMenu.class.getSimpleName();
 
-    private final static boolean DEBUG_LOG = BuildConfig.DEBUG;
+    private final static boolean DEBUG_LOG = false;
 
     // 响应 SlidingMenu 拖动的触摸范围默认值
     private final static int DEFAULT_SLIDING_WIDTH = 50;
@@ -54,10 +54,9 @@ public class SlidingMenu extends HorizontalScrollView {
     private boolean isLayoutComplete;
 
     private float mLastMotionX;
-
     private boolean mTouching = false;
     private boolean mTouchMoving = false;
-
+    private boolean mViewScrolling = false;
     private VelocityTracker mVelocityTracker;
 
     //    private int mTouchSlop;
@@ -179,8 +178,7 @@ public class SlidingMenu extends HorizontalScrollView {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         if (DEBUG_LOG) {
-            Log.d(TAG, "onInterceptTouchEvent \n");
-            Log.d(TAG, "ev : " + ev.toString());
+            Log.d(TAG, "onInterceptTouchEvent\nev : " + ev.toString());
         }
         boolean currentIntercept = true;
 
@@ -215,8 +213,11 @@ public class SlidingMenu extends HorizontalScrollView {
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         if (DEBUG_LOG) {
-            Log.d(TAG, "onTouchEvent \n");
-            Log.d(TAG, "ev : " + ev.toString());
+            Log.d(TAG, "onTouchEvent\nev : " + ev.toString());
+        }
+
+        if (mViewScrolling) {
+            return true;
         }
 
         initVelocityTrackerIfNotExists();
@@ -309,17 +310,25 @@ public class SlidingMenu extends HorizontalScrollView {
         }
         float contentScale = LEAST_CONTENT_SCALE + scale * (1 - LEAST_CONTENT_SCALE);
 
-        if (!mTouching && contentScale == 1.0f) {
-            isMenuOpen = false;
-        } else if (!mTouching && contentScale == LEAST_CONTENT_SCALE) {
-            isMenuOpen = true;
-        }
-
         changContentView(contentScale, isLtrDirection());
 
-        for (SlidingListener listener : mListeners) {
-            listener.onMenuSlide(mMenuView, scale);
+        notifyMenuSlide(scale);
+
+        if (!mTouching && contentScale == 1.0f) {
+            mViewScrolling = false;
+            if (isMenuOpen) {
+                isMenuOpen = false;
+                notifyMenuClose();
+            }
+        } else if (!mTouching && contentScale == LEAST_CONTENT_SCALE) {
+            mViewScrolling = false;
+            if (!isMenuOpen) {
+                isMenuOpen = true;
+                notifyMenuOpen();
+            }
         }
+
+
     }
 
     private void changContentView(float scale, boolean isLtr) {
@@ -338,21 +347,25 @@ public class SlidingMenu extends HorizontalScrollView {
     }
 
     public void openMenu() {
-        smoothScrollTo(getOpenPosition(), 0);
-        if (!isMenuOpen) {
-            isMenuOpen = true;
-            for (SlidingListener listener : mListeners) {
-                listener.onMenuOpened(mMenuView);
+        int scrollX = getScrollX();
+        if (scrollX != getOpenPosition()) {
+            mViewScrolling = true;
+            smoothScrollTo(getOpenPosition(), 0);
+            if (!isMenuOpen) {
+                isMenuOpen = true;
+                notifyMenuOpen();
             }
         }
     }
 
     public void closeMenu() {
-        smoothScrollTo(getClosePosition(), 0);
-        if (isMenuOpen) {
-            isMenuOpen = false;
-            for (SlidingListener listener : mListeners) {
-                listener.onMenuClosed(mMenuView);
+        int scrollX = getScrollX();
+        if (scrollX != getClosePosition()) {
+            mViewScrolling = true;
+            smoothScrollTo(getClosePosition(), 0);
+            if (isMenuOpen) {
+                isMenuOpen = false;
+                notifyMenuClose();
             }
         }
     }
@@ -402,6 +415,24 @@ public class SlidingMenu extends HorizontalScrollView {
         if (mVelocityTracker != null) {
             mVelocityTracker.recycle();
             mVelocityTracker = null;
+        }
+    }
+
+    private void notifyMenuOpen() {
+        for (SlidingListener listener : mListeners) {
+            listener.onMenuOpened(mMenuView);
+        }
+    }
+
+    private void notifyMenuClose() {
+        for (SlidingListener listener : mListeners) {
+            listener.onMenuClosed(mMenuView);
+        }
+    }
+
+    private void notifyMenuSlide(float slideOffset) {
+        for (SlidingListener listener : mListeners) {
+            listener.onMenuSlide(mMenuView, slideOffset);
         }
     }
 }
