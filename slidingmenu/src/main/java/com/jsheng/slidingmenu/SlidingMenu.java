@@ -4,8 +4,11 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
 
@@ -52,7 +55,14 @@ public class SlidingMenu extends HorizontalScrollView {
     private float mLastMotionX;
 
     private boolean mTouching = false;
+    private boolean mTouchFling = false;
     private boolean mTouchMoving = false;
+
+    private VelocityTracker mVelocityTracker;
+
+    private int mTouchSlop;
+    private int mMinimumVelocity;
+    private int mMaximumVelocity;
 
     /**
      * 不要在回调的接口函数中处理耗时任务
@@ -112,6 +122,13 @@ public class SlidingMenu extends HorizontalScrollView {
         mLayoutDirection = -1;
 
         mListeners = new ArrayList<>();
+
+        final ViewConfiguration configuration = ViewConfiguration.get(getContext());
+        mTouchSlop = configuration.getScaledTouchSlop();
+//        mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
+        mMinimumVelocity = 1000;
+//        mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
+        mMaximumVelocity = 6000;
     }
 
     @Override
@@ -195,8 +212,11 @@ public class SlidingMenu extends HorizontalScrollView {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-//        Log.d(TAG, "onTouchEvent \n");
-//        Log.d(TAG, "ev : " + ev.toString());
+        Log.d(TAG, "onTouchEvent \n");
+        Log.d(TAG, "ev : " + ev.toString());
+
+        initVelocityTrackerIfNotExists();
+        mVelocityTracker.addMovement(ev);
 
         final int action = ev.getAction();
 
@@ -216,13 +236,29 @@ public class SlidingMenu extends HorizontalScrollView {
             }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
+                boolean touchFling = false;
+                boolean flingCloseMenu = false, flingOpenMenu = false;
+
+                final VelocityTracker velocityTracker = mVelocityTracker;
+                velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
+                float xVelocity = velocityTracker.getXVelocity();
+                if (Math.abs(xVelocity) > mMinimumVelocity) {
+                    Log.d(TAG, "xVelocity = " + xVelocity);
+                    touchFling = true;
+                    flingOpenMenu = isLtrDirection() ? xVelocity > 0 : 0 > xVelocity;
+                    flingCloseMenu = !flingOpenMenu;
+                }
+                recycleVelocityTracker();
+
                 mTouching = false;
                 float evX = ev.getX();
-                if (mTouchMoving && isCanCloseMenu()) {
+                if ((!touchFling && mTouchMoving && isCanCloseMenu())
+                        || (isMenuOpen && flingCloseMenu)) {
                     closeMenu();
                     return true;
                 }
-                if (mTouchMoving && isCanOpenMenu()) {
+                if ((!touchFling && mTouchMoving && isCanOpenMenu())
+                        || (!isMenuOpen && flingOpenMenu)) {
                     openMenu();
                     return true;
                 }
@@ -346,5 +382,18 @@ public class SlidingMenu extends HorizontalScrollView {
                 || y >= view.getBottom()
                 || x < view.getLeft() - getScrollX()
                 || x >= view.getRight() - getScrollX());
+    }
+
+    private void initVelocityTrackerIfNotExists() {
+        if (mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        }
+    }
+
+    private void recycleVelocityTracker() {
+        if (mVelocityTracker != null) {
+            mVelocityTracker.recycle();
+            mVelocityTracker = null;
+        }
     }
 }
