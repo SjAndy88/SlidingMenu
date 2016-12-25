@@ -187,10 +187,6 @@ public class SlidingMenu extends HorizontalScrollView {
         return super.onInterceptTouchEvent(ev) || currentIntercept;
     }
 
-    private boolean canCloseInMenuOpen(int evX) {
-        return isLtrDirection() ? (evX > mScreenWidth - mSlidingPadding) : (evX < mSlidingPadding);
-    }
-
     private boolean canIgnoreInMenuOpen(int evX) {
         return isLtrDirection() ? (evX < mScreenWidth - mSlidingPadding) : (evX > mSlidingPadding);
     }
