@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -98,7 +97,6 @@ public class SlidingMenu extends HorizontalScrollView {
         super(context, attrs, defStyleAttr);
         initSlidingMenu();
 
-
         final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.SlidingMenu);
 
         mSlidingCrack = a.getDimensionPixelSize(R.styleable.SlidingMenu_slidingCrack, DEFAULT_SLIDING_WIDTH);
@@ -163,8 +161,8 @@ public class SlidingMenu extends HorizontalScrollView {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        Log.d(TAG, "onInterceptTouchEvent \n");
-        Log.d(TAG, "ev : " + ev.toString());
+//        Log.d(TAG, "onInterceptTouchEvent \n");
+//        Log.d(TAG, "ev : " + ev.toString());
         boolean currentIntercept = true;
 
         final int action = ev.getAction();
@@ -197,8 +195,8 @@ public class SlidingMenu extends HorizontalScrollView {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        Log.d(TAG, "onTouchEvent \n");
-        Log.d(TAG, "ev : " + ev.toString());
+//        Log.d(TAG, "onTouchEvent \n");
+//        Log.d(TAG, "ev : " + ev.toString());
 
         final int action = ev.getAction();
 
@@ -206,10 +204,10 @@ public class SlidingMenu extends HorizontalScrollView {
             case MotionEvent.ACTION_DOWN: {
                 mTouchMoving = false;
                 mTouching = true;
-                mLastMotionX =  ev.getX();
+                mLastMotionX = ev.getX();
                 break;
             }
-            case MotionEvent.ACTION_MOVE : {
+            case MotionEvent.ACTION_MOVE: {
                 float evX = ev.getX();
                 if (evX != mLastMotionX) {
                     mTouchMoving = true;
@@ -249,11 +247,7 @@ public class SlidingMenu extends HorizontalScrollView {
     }
 
     private boolean isSingleTapCanCloseMenu(int evX) {
-        if (isMenuOpen) {
-            return isLtrDirection() ? evX > mScreenWidth - mSlidingPadding : evX < mSlidingPadding;
-        } else {
-            return false;
-        }
+        return isMenuOpen && (isLtrDirection() ? evX > mScreenWidth - mSlidingPadding : evX < mSlidingPadding);
     }
 
     @Override
