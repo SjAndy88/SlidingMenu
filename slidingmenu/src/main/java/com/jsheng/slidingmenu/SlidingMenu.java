@@ -190,6 +190,8 @@ public class SlidingMenu extends HorizontalScrollView {
                 if (canIgnoreInMenuOpen(evX)) {
                     requestDisallowInterceptTouchEvent(true);
                     currentIntercept = false;
+                } else {
+                    return true; // 解决mContentView中有类似ViewPager组件，导致触摸事件被其消费。
                 }
             } else {
                 if (canIgnoreInMenuClose(evX)) {
@@ -351,10 +353,10 @@ public class SlidingMenu extends HorizontalScrollView {
         if (scrollX != getOpenPosition()) {
             mViewScrolling = true;
             smoothScrollTo(getOpenPosition(), 0);
-            if (!isMenuOpen) {
-                isMenuOpen = true;
-                notifyMenuOpen();
-            }
+        }
+        if (!isMenuOpen) {
+            isMenuOpen = true;
+            notifyMenuOpen();
         }
     }
 
@@ -363,10 +365,10 @@ public class SlidingMenu extends HorizontalScrollView {
         if (scrollX != getClosePosition()) {
             mViewScrolling = true;
             smoothScrollTo(getClosePosition(), 0);
-            if (isMenuOpen) {
-                isMenuOpen = false;
-                notifyMenuClose();
-            }
+        }
+        if (isMenuOpen) {
+            isMenuOpen = false;
+            notifyMenuClose();
         }
     }
 
