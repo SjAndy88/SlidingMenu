@@ -16,7 +16,7 @@ import butterknife.ButterKnife;
  * Created by shengjun on 2016/12/25.
  */
 
-public class MainFragment extends Fragment {
+public class ColorFragment extends Fragment {
 
     private final static String KEY_INDEX = "key_index";
     private final static String KEY_COLOR = "key_color";
@@ -29,8 +29,8 @@ public class MainFragment extends Fragment {
     private int index;
     private int color;
 
-    public static MainFragment getInstance(int index, int color) {
-        MainFragment fragment = new MainFragment();
+    public static ColorFragment getInstance(int index, int color) {
+        ColorFragment fragment = new ColorFragment();
         Bundle args = new Bundle();
         args.putInt(KEY_INDEX, index);
         args.putInt(KEY_COLOR, color);
@@ -59,8 +59,7 @@ public class MainFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         ButterKnife.bind(this, view);
 
-        view.setTag(color);
-        mContent.setBackgroundColor(color);
+        mContent.setBackgroundColor(getResources().getColor(color));
         mText.setText(index+"");
     }
 }

@@ -13,7 +13,6 @@ import android.widget.ImageView;
 import com.jsheng.slidingmenu.SlidingMenu;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -35,14 +34,6 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.menu_icon)
     ImageView mMenuIcon;
 
-    private static List<Integer> colors = new ArrayList<>();
-
-    static {
-        colors.add(R.color.colorYellow);
-        colors.add(R.color.colorBlue);
-        colors.add(R.color.colorGray);
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         mSlidingMenu.setSlidingViews(mMenuLayout, mContentLayout);
 
 
-        MainFragmentPagerAdapter adapter = new MainFragmentPagerAdapter(getSupportFragmentManager());
+        ColorPagerAdapter adapter = new ColorPagerAdapter(getSupportFragmentManager());
         mViewPager.setAdapter(adapter);
 
         mMenuIcon.setOnClickListener(new View.OnClickListener() {
@@ -63,20 +54,34 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    static class MainFragmentPagerAdapter extends FragmentPagerAdapter {
+    static class ColorPagerAdapter extends FragmentPagerAdapter {
 
-        public MainFragmentPagerAdapter(FragmentManager fm) {
+        private ArrayList<Fragment> mFragments;
+
+        private final int[] COLORS = new int[] {
+                R.color.red,
+                R.color.green,
+                R.color.blue,
+                R.color.white,
+                R.color.black
+        };
+
+        public ColorPagerAdapter(FragmentManager fm) {
             super(fm);
+            mFragments = new ArrayList<>();
+            for (int i = 0; i < COLORS.length; i++) {
+                mFragments.add(ColorFragment.getInstance(i, COLORS[i]));
+            }
         }
 
         @Override
         public Fragment getItem(int position) {
-            return MainFragment.getInstance(position, colors.get(position));
+            return mFragments.get(position);
         }
 
         @Override
         public int getCount() {
-            return colors.size();
+            return mFragments.size();
         }
     }
 }
