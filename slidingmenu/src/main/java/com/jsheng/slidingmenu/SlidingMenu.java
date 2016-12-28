@@ -75,9 +75,15 @@ public class SlidingMenu extends HorizontalScrollView {
         void onMenuClosed(View menuView);
     }
 
-    public void setSlidingListener(SlidingListener listener) {
+    public void addSlidingListener(SlidingListener listener) {
         if (mListeners != null) {
             mListeners.add(listener);
+        }
+    }
+
+    public void removeSlidingListener(SlidingListener listener) {
+        if (mListeners != null && mListeners.contains(listener)) {
+            mListeners.remove(listener);
         }
     }
 

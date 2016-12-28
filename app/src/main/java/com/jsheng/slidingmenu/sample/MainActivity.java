@@ -6,6 +6,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -17,7 +18,9 @@ import java.util.ArrayList;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SlidingMenu.SlidingListener {
+
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     @BindView(R.id.activity_main_layout)
     SlidingMenu mSlidingMenu;
@@ -41,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         mSlidingMenu.setSlidingViews(mMenuLayout, mContentLayout);
-
+        mSlidingMenu.addSlidingListener(this);
 
         ColorPagerAdapter adapter = new ColorPagerAdapter(getSupportFragmentManager());
         mViewPager.setAdapter(adapter);
@@ -54,11 +57,26 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onMenuSlide(View menuView, float slideOffset) {
+        Log.d(TAG, "onMenuSlide, slideOffset " + slideOffset);
+    }
+
+    @Override
+    public void onMenuOpened(View menuView) {
+        Log.d(TAG, "onMenuOpened");
+    }
+
+    @Override
+    public void onMenuClosed(View menuView) {
+        Log.d(TAG, "onMenuClosed");
+    }
+
     static class ColorPagerAdapter extends FragmentPagerAdapter {
 
         private ArrayList<Fragment> mFragments;
 
-        private final int[] COLORS = new int[] {
+        private final int[] COLORS = new int[]{
                 R.color.red,
                 R.color.green,
                 R.color.blue,
@@ -83,5 +101,11 @@ public class MainActivity extends AppCompatActivity {
         public int getCount() {
             return mFragments.size();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mSlidingMenu.removeSlidingListener(this);
     }
 }
