@@ -1,6 +1,7 @@
 package com.jsheng.slidingmenu.sample;
 
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
@@ -37,6 +38,8 @@ public class MainActivity extends AppCompatActivity implements SlidingMenu.Slidi
     @BindView(R.id.menu_icon)
     ImageView mMenuIcon;
 
+    private ColorPagerAdapter mAdapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,8 +49,32 @@ public class MainActivity extends AppCompatActivity implements SlidingMenu.Slidi
         mSlidingMenu.setSlidingViews(mMenuLayout, mContentLayout);
         mSlidingMenu.addSlidingListener(this);
 
-        ColorPagerAdapter adapter = new ColorPagerAdapter(getSupportFragmentManager());
-        mViewPager.setAdapter(adapter);
+        mAdapter = new ColorPagerAdapter(getSupportFragmentManager());
+        mViewPager.setAdapter(mAdapter);
+        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                Log.d(TAG, "onPageSelected, position " + position);
+                setSlidingMenuInterceptType(position);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
+            }
+        });
+        if (mSlidingMenu.isLtrDirection()) {
+            mViewPager.setCurrentItem(0);
+        } else {
+            mViewPager.setCurrentItem(mAdapter.getCount() - 1);
+        }
+        mSlidingMenu.setInterceptAll(true);
+
 
         mMenuIcon.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,6 +82,19 @@ public class MainActivity extends AppCompatActivity implements SlidingMenu.Slidi
                 mSlidingMenu.openMenu();
             }
         });
+    }
+
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+    }
+
+    private void setSlidingMenuInterceptType(int posViewPager) {
+        if (mSlidingMenu.isLtrDirection()) {
+            mSlidingMenu.setInterceptAll(posViewPager == 0);
+        } else {
+            mSlidingMenu.setInterceptAll(posViewPager == mAdapter.getCount() - 1);
+        }
     }
 
     @Override

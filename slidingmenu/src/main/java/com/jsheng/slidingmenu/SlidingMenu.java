@@ -2,12 +2,12 @@ package com.jsheng.slidingmenu;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
 
@@ -35,11 +35,10 @@ public class SlidingMenu extends HorizontalScrollView {
 
     // 响应 SlidingMenu 拖动的触摸范围
     private int mSlidingCrack;
-    // mMenuWidth = mScreenWidth - mSlidingPadding
     private int mSlidingPadding;
 
     private List<SlidingListener> mListeners;
-    private int mLayoutDirection;
+    private boolean mIsLtrDirection;
 
     private ViewGroup mMenuView;
     private ViewGroup mContentView;
@@ -53,15 +52,21 @@ public class SlidingMenu extends HorizontalScrollView {
     private int mScreenWidth;
     private boolean isLayoutComplete;
 
-    private float mLastMotionX;
+    private int mLastMotionX;
     private boolean mTouching = false;
     private boolean mTouchMoving = false;
     private boolean mViewScrolling = false;
     private VelocityTracker mVelocityTracker;
 
-    //    private int mTouchSlop;
+    private int mTouchSlop;
     private int mMinimumVelocity;
     private int mMaximumVelocity;
+
+    private boolean mInterceptAll = false;
+
+    public void setInterceptAll(boolean intercept) {
+        this.mInterceptAll = intercept;
+    }
 
     /**
      * 不要在回调的接口函数中处理耗时任务
@@ -124,14 +129,12 @@ public class SlidingMenu extends HorizontalScrollView {
         mScreenWidth = Utils.getScreenWidth(this);
         mOpenPosition = -1;
         mClosePosition = -1;
-        mLayoutDirection = -1;
+        mIsLtrDirection = Utils.isLtrDirection(getContext());
 
         mListeners = new ArrayList<>();
 
-//        final ViewConfiguration configuration = ViewConfiguration.get(getContext());
-//        mTouchSlop = configuration.getScaledTouchSlop();
-//        mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
-//        mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
+        final ViewConfiguration configuration = ViewConfiguration.get(getContext());
+        mTouchSlop = configuration.getScaledTouchSlop();
         mMinimumVelocity = 1000;
         mMaximumVelocity = 6000;
     }
@@ -143,14 +146,14 @@ public class SlidingMenu extends HorizontalScrollView {
 
     private int getOpenPosition() {
         if (mOpenPosition == -1) {
-            mOpenPosition = isLtrDirection() ? 0 : mMenuWidth;
+            mOpenPosition = mIsLtrDirection ? 0 : mMenuWidth;
         }
         return mOpenPosition;
     }
 
     private int getClosePosition() {
         if (mClosePosition == -1) {
-            mClosePosition = isLtrDirection() ? mMenuWidth : 0;
+            mClosePosition = mIsLtrDirection ? mMenuWidth : 0;
         }
         return mClosePosition;
     }
@@ -190,32 +193,57 @@ public class SlidingMenu extends HorizontalScrollView {
 
         final int action = ev.getAction();
 
-        if (action == MotionEvent.ACTION_DOWN) {
-            final int evX = (int) ev.getX();
-            if (isMenuOpen) {
-                if (canIgnoreInMenuOpen(evX)) {
-                    requestDisallowInterceptTouchEvent(true);
-                    currentIntercept = false;
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: {
+                final int evX = (int) ev.getX();
+                mLastMotionX = (int) ev.getX();
+                if (isMenuOpen) {
+                    if (canIgnoreInMenuOpen(evX)) {
+                        requestDisallowInterceptTouchEvent(true);
+                        currentIntercept = false;
+                    } else {
+                        return true; // 解决mContentView中有类似ViewPager组件，导致触摸事件被其消费。
+                    }
                 } else {
-                    return true; // 解决mContentView中有类似ViewPager组件，导致触摸事件被其消费。
+                    boolean canHandle = canHandleInMenuClose(evX);
+                    if (canHandle) {
+                        return true;
+                    } else {
+                        if (!mInterceptAll && canIgnoreInMenuClose(evX)) {
+                            requestDisallowInterceptTouchEvent(true);
+                            currentIntercept = false;
+                        }
+                    }
                 }
-            } else {
-                if (canIgnoreInMenuClose(evX)) {
-                    requestDisallowInterceptTouchEvent(true);
-                    currentIntercept = false;
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                final int evX = (int) ev.getX();
+                int xDiff = evX - mLastMotionX;
+                if (Math.abs(xDiff) > mTouchSlop) {
+                    return mInterceptAll && isMenuOpenDirection(xDiff);
                 }
+                break;
             }
         }
 
-        return super.onInterceptTouchEvent(ev) || currentIntercept;
+        return super.onInterceptTouchEvent(ev) && currentIntercept;
     }
 
     private boolean canIgnoreInMenuOpen(int evX) {
-        return isLtrDirection() ? (evX < mScreenWidth - mSlidingPadding) : (evX > mSlidingPadding);
+        return mIsLtrDirection ? (evX < mScreenWidth - mSlidingPadding) : (evX > mSlidingPadding);
     }
 
     private boolean canIgnoreInMenuClose(int evX) {
-        return isLtrDirection() ? (evX > mSlidingCrack) : (evX < mScreenWidth - mSlidingCrack);
+        return mIsLtrDirection ? (evX > mSlidingCrack) : (evX < mScreenWidth - mSlidingCrack);
+    }
+
+    private boolean canHandleInMenuClose(int evX) {
+        return mIsLtrDirection ? (evX < mSlidingCrack) : (evX > mScreenWidth - mSlidingCrack);
+    }
+
+    private boolean isMenuOpenDirection(int diff) {
+        return mIsLtrDirection ? diff > 0 : diff < 0;
     }
 
     @Override
@@ -237,7 +265,7 @@ public class SlidingMenu extends HorizontalScrollView {
             case MotionEvent.ACTION_DOWN: {
                 mTouchMoving = false;
                 mTouching = true;
-                mLastMotionX = ev.getX();
+                mLastMotionX = (int) ev.getX();
                 break;
             }
             case MotionEvent.ACTION_MOVE: {
@@ -260,7 +288,7 @@ public class SlidingMenu extends HorizontalScrollView {
                         Log.d(TAG, "xVelocity = " + xVelocity);
                     }
                     touchFling = true;
-                    flingOpenMenu = isLtrDirection() ? xVelocity > 0 : 0 > xVelocity;
+                    flingOpenMenu = mIsLtrDirection ? xVelocity > 0 : 0 > xVelocity;
                     flingCloseMenu = !flingOpenMenu;
                 }
                 recycleVelocityTracker();
@@ -289,16 +317,16 @@ public class SlidingMenu extends HorizontalScrollView {
     }
 
     private boolean isCanCloseMenu() {
-        return isLtrDirection() ? getScrollX() > mHalfMenuWidth : getScrollX() < mHalfMenuWidth;
+        return mIsLtrDirection ? getScrollX() > mHalfMenuWidth : getScrollX() < mHalfMenuWidth;
     }
 
 
     private boolean isCanOpenMenu() {
-        return isLtrDirection() ? getScrollX() < mHalfMenuWidth : getScrollX() > mHalfMenuWidth;
+        return mIsLtrDirection ? getScrollX() < mHalfMenuWidth : getScrollX() > mHalfMenuWidth;
     }
 
     private boolean isSingleTapCanCloseMenu(int evX) {
-        return isMenuOpen && (isLtrDirection() ? evX > mScreenWidth - mSlidingPadding : evX < mSlidingPadding);
+        return isMenuOpen && (mIsLtrDirection ? evX > mScreenWidth - mSlidingPadding : evX < mSlidingPadding);
     }
 
     @Override
@@ -309,7 +337,7 @@ public class SlidingMenu extends HorizontalScrollView {
 
     private void handleScrollChanged(int l) {
         float scale;
-        if (isLtrDirection()) {
+        if (mIsLtrDirection) {
             // 默认关闭的情况下，l 的大小就是menuWidth，所以从关到开滚动时 l 从大到小
             scale = l * 1.0f / mMenuWidth;
         } else {
@@ -318,7 +346,7 @@ public class SlidingMenu extends HorizontalScrollView {
         }
         float contentScale = LEAST_CONTENT_SCALE + scale * (1 - LEAST_CONTENT_SCALE);
 
-        changContentView(contentScale, isLtrDirection());
+        changContentView(contentScale, mIsLtrDirection);
 
         notifyMenuSlide(scale);
 
@@ -383,11 +411,8 @@ public class SlidingMenu extends HorizontalScrollView {
      *
      * @return true, 是LTR；false，是RTL。
      */
-    private boolean isLtrDirection() {
-        if (mLayoutDirection == -1) {
-            mLayoutDirection = Utils.getLayoutDirection(this);
-        }
-        return mLayoutDirection == ViewCompat.LAYOUT_DIRECTION_LTR;
+    public boolean isLtrDirection() {
+        return mIsLtrDirection;
     }
 
     @Override
